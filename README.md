@@ -11,21 +11,9 @@ Dockerized script that downloads current-month invoice PDFs from Cursor and Clau
 
 ### 1. Create auth cookie files (one-time)
 
-**Option A: Automatic extraction (recommended)**
+Extract cookies from your browser and create the auth files manually.
 
-Close Chrome completely, then run:
-
-```bash
-npm install
-npx playwright install chrome
-npm run extract-cookies
-```
-
-This opens your system Chrome, extracts the session cookies, and saves `cursor-auth.json` and `claude-auth.json` automatically.
-
-**Option B: Manual extraction**
-
-1. Open the service in Chrome (e.g. https://cursor.com/dashboard/billing)
+1. Open the service in Chrome
 2. DevTools (F12) → Application → Cookies
 3. Copy the cookie value and create the JSON file:
 
