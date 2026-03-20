@@ -48,10 +48,10 @@ docker compose run --rm invoice-radar
 
 ## Automate with cron
 
-Run on the 2nd of every month at 10:00 AM:
+Run on the 25th of every month at 10:00 AM:
 
 ```
-0 10 2 * * cd /path/to/invoice-radar && docker compose run --rm invoice-radar >> /var/log/invoice-radar.log 2>&1
+0 10 25 * * cd /path/to/invoice-radar && docker compose run --rm invoice-radar >> /var/log/invoice-radar.log 2>&1
 ```
 
 ## How the cookie extension works
