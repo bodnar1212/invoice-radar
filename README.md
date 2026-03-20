@@ -54,6 +54,25 @@ Run on the 2nd of every month at 10:00 AM:
 0 10 2 * * cd /path/to/invoice-radar && docker compose run --rm invoice-radar >> /var/log/invoice-radar.log 2>&1
 ```
 
+## How the cookie extension works
+
+The extension has two parts:
+
+1. **Background service worker** (`background.js`) — runs inside Chrome and listens to `chrome.cookies.onChanged`. Whenever the `WorkosCursorSessionToken` (Cursor) or `sessionKey` (Claude) cookie is set or updated, it formats the cookie into Playwright's `storageState` JSON and sends it to the native host.
+
+2. **Native messaging host** (`native-host/invoice_radar_cookie_host.py`) — a small Python script that Chrome launches as a subprocess. It receives the JSON from the extension and writes it to `cursor-auth.json` or `claude-auth.json` in the project root.
+
+The connection between them is registered by `install-native-host.sh`, which writes a manifest to `~/.config/google-chrome/NativeMessagingHosts/`. This persists across restarts — you only run it once.
+
+```
+Chrome cookie changes
+  → background.js detects it
+    → sends JSON via native messaging
+      → invoice_radar_cookie_host.py writes to auth file
+```
+
+The extension popup also lets you manually copy auth JSON to clipboard as a fallback.
+
 ## Troubleshooting the extension
 
 1. Go to `chrome://extensions`
