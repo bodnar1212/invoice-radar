@@ -11,14 +11,25 @@ Dockerized script that downloads current-month invoice PDFs from Cursor and Clau
 
 ### 1. Create auth cookie files (one-time)
 
-Extract cookies from your browser and create the auth files manually.
+**Option A: Automatic extraction (recommended)**
 
-**Cursor** — get the `WorkosCursorSessionToken` cookie from https://cursor.com:
+Close Chrome completely, then run:
 
-1. Open https://cursor.com/dashboard/billing in Chrome
-2. DevTools (F12) → Application → Cookies → `cursor.com`
-3. Copy the value of `WorkosCursorSessionToken`
-4. Create `cursor-auth.json`:
+```bash
+npm install
+npx playwright install chrome
+npm run extract-cookies
+```
+
+This opens your system Chrome, extracts the session cookies, and saves `cursor-auth.json` and `claude-auth.json` automatically.
+
+**Option B: Manual extraction**
+
+1. Open the service in Chrome (e.g. https://cursor.com/dashboard/billing)
+2. DevTools (F12) → Application → Cookies
+3. Copy the cookie value and create the JSON file:
+
+**Cursor** — cookie name: `WorkosCursorSessionToken`
 
 ```json
 {
@@ -38,12 +49,7 @@ Extract cookies from your browser and create the auth files manually.
 }
 ```
 
-**Claude** — get the `sessionKey` cookie from https://claude.ai:
-
-1. Open https://claude.ai in Chrome
-2. DevTools (F12) → Application → Cookies → `claude.ai`
-3. Copy the value of `sessionKey`
-4. Create `claude-auth.json`:
+**Claude** — cookie name: `sessionKey`
 
 ```json
 {
@@ -84,7 +90,10 @@ services:
       - AWS_REGION=us-east-1
       - SES_FROM_EMAIL=invoices@yourdomain.com
       - TARGET_EMAIL=you@example.com
+      - ENABLED_SERVICES=cursor,claude
 ```
+
+> To disable a service, remove it from `ENABLED_SERVICES`. For example, `ENABLED_SERVICES=cursor` will only process Cursor invoices.
 
 > This file is gitignored. Docker Compose merges it automatically with `docker-compose.yml`.
 
@@ -136,8 +145,8 @@ Both PDFs are sent as email attachments via AWS SES.
 
 | Scenario | Subject |
 |---|---|
-| Invoice found | `[Cursor] Invoice March 2026` |
-| Invoice found | `[Claude] Invoice March 2026` |
+| Invoice found | `INVOICE Cursor [March] [Andrei Bodnar]` |
+| Invoice found | `INVOICE Claude [March] [Andrei Bodnar]` |
 | Session expired | `[Cursor] Session Expired — Action Required` |
 
 ## Refreshing expired sessions
@@ -153,6 +162,7 @@ If you receive a "Session Expired" email, repeat step 1 for that service — cop
 | `AWS_REGION` | AWS region (e.g. `us-east-1`) |
 | `SES_FROM_EMAIL` | Sender email (must be verified in SES) |
 | `TARGET_EMAIL` | Recipient email |
+| `ENABLED_SERVICES` | Comma-separated list of services to process (default: `cursor,claude`) |
 
 ## Files
 

@@ -12,6 +12,8 @@ const YEAR = now.getFullYear();
 const MONTH = now.getMonth();
 const MONTH_YEAR = `${MONTH_LONG} ${YEAR}`;
 
+const ENABLED_SERVICES = (process.env.ENABLED_SERVICES || 'cursor,claude').split(',').map(s => s.trim().toLowerCase());
+
 const STEALTH_ARGS = ['--disable-blink-features=AutomationControlled'];
 const STEALTH_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
@@ -269,7 +271,10 @@ async function processClaude() {
 
 (async () => {
   console.log(`Looking for invoices for: ${MONTH_YEAR}`);
-  await processCursor();
-  await processClaude();
+  console.log(`Enabled services: ${ENABLED_SERVICES.join(', ')}`);
+
+  if (ENABLED_SERVICES.includes('cursor')) await processCursor();
+  if (ENABLED_SERVICES.includes('claude')) await processClaude();
+
   console.log('\nDone.');
 })();
