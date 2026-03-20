@@ -36,6 +36,7 @@ services:
       - AWS_REGION=us-east-1
       - SES_FROM_EMAIL=invoices@yourdomain.com
       - TARGET_EMAIL=you@example.com
+      - INVOICE_NAME=Your Name
       - ENABLED_SERVICES=cursor,claude
 ```
 
@@ -97,4 +98,5 @@ If you get a "Session Expired" email, just log into that service in Chrome — t
 | `AWS_REGION` | AWS region (e.g. `us-east-1`) |
 | `SES_FROM_EMAIL` | Sender email (verified in SES) |
 | `TARGET_EMAIL` | Recipient email |
+| `INVOICE_NAME` | Name to include in invoice email subjects (required) |
 | `ENABLED_SERVICES` | Services to process (default: `cursor,claude`) |

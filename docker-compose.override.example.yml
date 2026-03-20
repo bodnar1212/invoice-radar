@@ -6,4 +6,5 @@ services:
       - AWS_REGION=us-east-1
       - SES_FROM_EMAIL=invoices@yourdomain.com
       - TARGET_EMAIL=you@example.com
+      - INVOICE_NAME=Your Name
       - ENABLED_SERVICES=cursor,claude

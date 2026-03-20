@@ -12,6 +12,12 @@ const YEAR = now.getFullYear();
 const MONTH = now.getMonth();
 const MONTH_YEAR = `${MONTH_LONG} ${YEAR}`;
 
+const INVOICE_NAME = process.env.INVOICE_NAME;
+if (!INVOICE_NAME) {
+  console.error('Error: INVOICE_NAME environment variable is required');
+  process.exit(1);
+}
+
 const ENABLED_SERVICES = (process.env.ENABLED_SERVICES || 'cursor,claude').split(',').map(s => s.trim().toLowerCase());
 
 const STEALTH_ARGS = ['--disable-blink-features=AutomationControlled'];
@@ -95,7 +101,7 @@ async function processCursor() {
     if (pdfPath) {
       console.log(`  Downloaded: ${pdfPath}`);
       await sendEmail(
-        `INVOICE Cursor [${MONTH_LONG}] [Andrei Bodnar]`,
+        `INVOICE Cursor [${MONTH_LONG}] [${INVOICE_NAME}]`,
         `Attached: Cursor invoice for ${MONTH_YEAR}.`,
         { filename: `Cursor-Invoice-${MONTH_LONG}-${YEAR}.pdf`, content: fs.readFileSync(pdfPath) },
       );
@@ -254,7 +260,7 @@ async function processClaude() {
     console.log(`  Downloaded: ${filePath} (${pdfBuffer.length} bytes)`);
 
     await sendEmail(
-      `INVOICE Claude [${MONTH_LONG}] [Andrei Bodnar]`,
+      `INVOICE Claude [${MONTH_LONG}] [${INVOICE_NAME}]`,
       `Attached: Claude invoice for ${MONTH_YEAR}.`,
       { filename: `Claude-Invoice-${MONTH_LONG}-${YEAR}.pdf`, content: pdfBuffer },
     );
