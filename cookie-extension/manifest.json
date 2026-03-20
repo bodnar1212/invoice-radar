@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Invoice Radar Cookie Export",
+  "version": "2.0",
+  "description": "Auto-export Cursor/Claude cookies for invoice-radar",
+  "permissions": ["cookies", "nativeMessaging"],
+  "host_permissions": [
+    "https://cursor.com/*",
+    "https://*.cursor.com/*",
+    "https://claude.ai/*",
+    "https://*.claude.ai/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}
