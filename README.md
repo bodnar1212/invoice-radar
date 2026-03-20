@@ -54,6 +54,17 @@ Run on the 2nd of every month at 10:00 AM:
 0 10 2 * * cd /path/to/invoice-radar && docker compose run --rm invoice-radar >> /var/log/invoice-radar.log 2>&1
 ```
 
+## Troubleshooting the extension
+
+1. Go to `chrome://extensions`
+2. Find "Invoice Radar Cookie Export" → click the **Service worker** link to open its DevTools
+3. Reload the extension (click the refresh icon)
+4. Visit `claude.ai` or `cursor.com` in another tab
+5. Check the console — you should see one of:
+   - `Cookie changed: ...` then `Saved ...` — working
+   - `Cookie changed: ...` then `Native messaging error: ...` — native host issue, re-run `install-native-host.sh`
+   - Nothing — cookie name doesn't match, check that you're logged in
+
 ## Refreshing expired sessions
 
 If you get a "Session Expired" email, just log into that service in Chrome — the extension updates the auth file automatically.
