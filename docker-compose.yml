@@ -1,0 +1,6 @@
+services:
+  invoice-radar:
+    build: .
+    volumes:
+      - ./cursor-auth.json:/auth/cursor-auth.json:ro
+      - ./claude-auth.json:/auth/claude-auth.json:ro

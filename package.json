@@ -1,0 +1,13 @@
+{
+  "name": "invoice-radar",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "playwright": "1.50.0",
+    "@aws-sdk/client-ses": "^3.700.0",
+    "nodemailer": "^6.9.0"
+  }
+}

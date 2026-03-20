@@ -1,0 +1,6 @@
+node_modules/
+cursor-auth.json
+claude-auth.json
+.env
+docker-compose.override.yml
+package-lock.json
