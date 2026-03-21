@@ -31,7 +31,7 @@ async function sendEmail(subject, text, attachment) {
 
   const mailOpts = {
     from: process.env.SES_FROM_EMAIL,
-    to: process.env.TARGET_EMAIL,
+    to: process.env.TARGET_EMAIL.split(',').map(e => e.trim()),
     subject,
     text,
   };
