@@ -65,21 +65,14 @@ function downloadFile(url) {
   });
 }
 
-// --- Cursor: page scraping approach ---
+// --- Session checks ---
 
-async function processCursor() {
-  console.log('\nProcessing Cursor...');
+async function checkCursorSession() {
   const authFile = '/auth/cursor-auth.json';
-  if (!fs.existsSync(authFile)) {
-    console.log('  Auth file not found — skipping');
-    return;
-  }
+  if (!fs.existsSync(authFile)) return { valid: false, reason: 'auth file not found' };
 
   const browser = await chromium.launch();
-  const context = await browser.newContext({
-    storageState: authFile,
-    acceptDownloads: true,
-  });
+  const context = await browser.newContext({ storageState: authFile, acceptDownloads: true });
   const page = await context.newPage();
 
   try {
@@ -89,14 +82,46 @@ async function processCursor() {
     await page.waitForTimeout(5000);
 
     if (!page.url().includes('cursor.com/dashboard')) {
-      console.log('  Session expired — sending alert');
-      await sendEmail(
-        '[Cursor] Session Expired — Action Required',
-        'Cursor session expired.\n\nRefresh with:\nnpx playwright codegen --save-storage=cursor-auth.json https://cursor.com/dashboard/billing',
-      );
-      return;
+      await browser.close();
+      return { valid: false, reason: 'session expired' };
     }
+    return { valid: true, browser, context, page };
+  } catch (err) {
+    await browser.close();
+    return { valid: false, reason: err.message };
+  }
+}
 
+async function checkClaudeSession() {
+  const authFile = '/auth/claude-auth.json';
+  if (!fs.existsSync(authFile)) return { valid: false, reason: 'auth file not found' };
+
+  const browser = await chromium.launch({ args: STEALTH_ARGS });
+  const context = await browser.newContext({ storageState: authFile, userAgent: STEALTH_UA });
+
+  try {
+    const bootstrapRes = await context.request.get(
+      'https://claude.ai/api/bootstrap?statsig_hashing_algorithm=djb2&growthbook_format=sdk&include_system_prompts=false'
+    );
+
+    if (!bootstrapRes.ok()) {
+      await browser.close();
+      return { valid: false, reason: `API returned ${bootstrapRes.status()}` };
+    }
+    return { valid: true, browser, context, bootstrapRes };
+  } catch (err) {
+    await browser.close();
+    return { valid: false, reason: err.message };
+  }
+}
+
+// --- Cursor: page scraping approach ---
+
+async function processCursor(session) {
+  console.log('\nProcessing Cursor...');
+  const { browser, context, page } = session;
+
+  try {
     const pdfPath = await findCursorInvoice(context, page);
     if (pdfPath) {
       console.log(`  Downloaded: ${pdfPath}`);
@@ -177,34 +202,11 @@ async function downloadStripeInvoice(context, stripeUrl) {
 
 // --- Claude: API approach (bypasses Cloudflare) ---
 
-async function processClaude() {
+async function processClaude(session) {
   console.log('\nProcessing Claude...');
-  const authFile = '/auth/claude-auth.json';
-  if (!fs.existsSync(authFile)) {
-    console.log('  Auth file not found — skipping');
-    return;
-  }
+  const { browser, context, bootstrapRes } = session;
 
-  const browser = await chromium.launch({ args: STEALTH_ARGS });
-  const context = await browser.newContext({
-    storageState: authFile,
-    userAgent: STEALTH_UA,
-  });
   try {
-    // Try API directly with stored session cookies (skips Cloudflare challenge)
-    const bootstrapRes = await context.request.get(
-      'https://claude.ai/api/bootstrap?statsig_hashing_algorithm=djb2&growthbook_format=sdk&include_system_prompts=false'
-    );
-
-    if (!bootstrapRes.ok()) {
-      console.log(`  API returned ${bootstrapRes.status()} — session expired`);
-      await sendEmail(
-        '[Claude] Session Expired — Action Required',
-        'Claude session expired.\n\nRefresh by copying the sessionKey cookie from your browser into claude-auth.json',
-      );
-      return;
-    }
-
     const bootstrap = await bootstrapRes.json();
     const orgUuid = bootstrap.account?.memberships?.[0]?.organization?.uuid;
 
@@ -269,8 +271,61 @@ async function processClaude() {
   console.log(`Looking for invoices for: ${MONTH_YEAR}`);
   console.log(`Enabled services: ${ENABLED_SERVICES.join(', ')}`);
 
-  if (ENABLED_SERVICES.includes('cursor')) await processCursor();
-  if (ENABLED_SERVICES.includes('claude')) await processClaude();
+  // Phase 1: Check all sessions before processing anything
+  const sessions = {};
+  const expired = [];
+
+  if (ENABLED_SERVICES.includes('cursor')) {
+    console.log('\nChecking Cursor session...');
+    sessions.cursor = await checkCursorSession();
+    if (sessions.cursor.valid) {
+      console.log('  Session OK');
+    } else {
+      console.log(`  ${sessions.cursor.reason}`);
+      expired.push('Cursor');
+    }
+  }
+
+  if (ENABLED_SERVICES.includes('claude')) {
+    console.log('\nChecking Claude session...');
+    sessions.claude = await checkClaudeSession();
+    if (sessions.claude.valid) {
+      console.log('  Session OK');
+    } else {
+      console.log(`  ${sessions.claude.reason}`);
+      expired.push('Claude');
+    }
+  }
+
+  // If any session is expired, send alerts and abort
+  if (expired.length > 0) {
+    console.log(`\nSession check failed for: ${expired.join(', ')} — aborting all services`);
+
+    if (expired.includes('Cursor')) {
+      await sendEmail(
+        '[Cursor] Session Expired — Action Required',
+        'Cursor session expired.\n\nRefresh with:\nnpx playwright codegen --save-storage=cursor-auth.json https://cursor.com/dashboard/billing',
+      );
+    }
+    if (expired.includes('Claude')) {
+      await sendEmail(
+        '[Claude] Session Expired — Action Required',
+        'Claude session expired.\n\nRefresh by copying the sessionKey cookie from your browser into claude-auth.json',
+      );
+    }
+
+    // Clean up any valid sessions that were opened
+    for (const s of Object.values(sessions)) {
+      if (s.valid && s.browser) await s.browser.close();
+    }
+
+    console.log('\nDone.');
+    return;
+  }
+
+  // Phase 2: All sessions valid — process invoices
+  if (sessions.cursor?.valid) await processCursor(sessions.cursor);
+  if (sessions.claude?.valid) await processClaude(sessions.claude);
 
   console.log('\nDone.');
 })();
