@@ -190,20 +190,14 @@ async function processClaude() {
     storageState: authFile,
     userAgent: STEALTH_UA,
   });
-  await context.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => false });
-  });
-  const page = await context.newPage();
-
   try {
-    // Load settings page to pass Cloudflare and get cookies
-    await page.goto('https://claude.ai/settings', {
-      waitUntil: 'domcontentloaded', timeout: 60000,
-    });
-    await page.waitForTimeout(12000);
+    // Try API directly with stored session cookies (skips Cloudflare challenge)
+    const bootstrapRes = await context.request.get(
+      'https://claude.ai/api/bootstrap?statsig_hashing_algorithm=djb2&growthbook_format=sdk&include_system_prompts=false'
+    );
 
-    if (!page.url().includes('claude.ai/settings')) {
-      console.log('  Session expired — sending alert');
+    if (!bootstrapRes.ok()) {
+      console.log(`  API returned ${bootstrapRes.status()} — session expired`);
       await sendEmail(
         '[Claude] Session Expired — Action Required',
         'Claude session expired.\n\nRefresh by copying the sessionKey cookie from your browser into claude-auth.json',
@@ -211,10 +205,6 @@ async function processClaude() {
       return;
     }
 
-    // Get org UUID from bootstrap API
-    const bootstrapRes = await context.request.get(
-      'https://claude.ai/api/bootstrap?statsig_hashing_algorithm=djb2&growthbook_format=sdk&include_system_prompts=false'
-    );
     const bootstrap = await bootstrapRes.json();
     const orgUuid = bootstrap.account?.memberships?.[0]?.organization?.uuid;
 
