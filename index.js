@@ -208,7 +208,11 @@ async function processClaude(session) {
 
   try {
     const bootstrap = await bootstrapRes.json();
-    const orgUuid = bootstrap.account?.memberships?.[0]?.organization?.uuid;
+    const memberships = bootstrap.account?.memberships || [];
+    const billingOrg = memberships.find(m =>
+      (m.organization?.capabilities || []).some(c => /claude_(max|pro|team|enterprise)/.test(c))
+    ) || memberships[0];
+    const orgUuid = billingOrg?.organization?.uuid;
 
     if (!orgUuid) {
       console.log('  Could not find organization UUID — skipping');
